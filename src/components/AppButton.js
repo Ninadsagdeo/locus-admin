@@ -12,8 +12,8 @@ export default function AppButton(props) {
         textTransform: "none",
         borderRadius: 2,
         backgroundColor: "rgb(31,108,227)",
-        width: "30%",
-        height: 40,
+        width: "35%",
+        height: 60,
         ":hover": {
           backgroundColor: "rgb(31,108,227)",
         },

@@ -19,6 +19,8 @@ import TablePagination from "@mui/material/TablePagination";
 import TableContainer from "@mui/material/TableContainer";
 import Button from "@mui/material/Button";
 import axios from "axios";
+import { API_URL } from "../utils/api";
+import { Snackbar } from "@mui/material";
 
 const drawerWidth = 240;
 
@@ -62,102 +64,84 @@ function createData(
   };
 }
 
-const rows = [
-  createData(
-    0,
-    "TC",
-    "Tom Cruise",
-    "tom@gmail.com",
-    "+101111121212",
-    "25/02/1995",
-    26,
-    8
-  ),
-  createData(
-    1,
-    "MB",
-    "Monica Bing",
-    "monica07@gmail.com",
-    "+101111121212",
-    "05/01/1985",
-    5,
-    1
-  ),
-  createData(
-    2,
-    "RG",
-    "Ross Geller",
-    "profross@gmail.com",
-    "+101111121212",
-    "16/05/1992",
-    12,
-    2
-  ),
-  createData(
-    3,
-    "JT",
-    "Joey Tribiani",
-    "toy@gmail.com",
-    "+101111121212",
-    "04/12/2000",
-    8,
-    1
-  ),
-  createData(
-    4,
-    "MA",
-    "Munnam Ali",
-    "munnam403@gmail.com",
-    "+101111121212",
-    "02/11/1998",
-    26,
-    8
-  ),
-  createData(
-    5,
-    "CB",
-    "Chandler Bing",
-    "chandler@gmail.com",
-    "+101111121212",
-    "02/11/1983",
-    26,
-    8
-  ),
-];
-
 function preventDefault(event) {
   event.preventDefault();
 }
 
 export default function Customers() {
   const [page, setPage] = React.useState(0);
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
+
   const [rowsPerPage, setRowsPerPage] = React.useState(8);
+
+  const [paginatedInfo, setPaginatedInfo] = useState(null);
+
+  const [offset, setOffset] = useState(1);
+  const [limit, setLimit] = useState(8);
+
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isToastOpen, setIsToastOpen] = useState(false);
+
+  useEffect(() => {
+    // Update network status
+    const handleStatusChange = () => {
+      setIsOnline(navigator.onLine);
+      console.log("navigator.onLine ", navigator.onLine);
+      if (navigator.onLine === false) {
+        setIsToastOpen(true);
+      } else {
+        setIsToastOpen(false);
+      }
+    };
+
+    // Listen to the online status
+    window.addEventListener("online", handleStatusChange);
+
+    // Listen to the offline status
+    window.addEventListener("offline", handleStatusChange);
+
+    // Specify how to clean up after this effect for performance improvment
+    return () => {
+      window.removeEventListener("online", handleStatusChange);
+      window.removeEventListener("offline", handleStatusChange);
+    };
+  }, [isOnline]);
+
   const handleChangeRowsPerPage = (event) => {
     setRowsPerPage(parseInt(event.target.value, 16));
     setPage(0);
   };
-  const [data1, setData1] = useState([]);
-  useEffect(() => {
-    const API_URL1 = "http://13.238.161.52:4000/api/v1/admin/customers/list";
+  const handleChangePage = async (event, newPage) => {
+    console.log("NEW PAGE ", newPage);
+    setPage(newPage);
 
-    axios(API_URL1, {
+    const offsetData = Number(newPage) * limit;
+
+    await axios(
+      API_URL + `admin/customers/list?limit=${limit}&offset=${offsetData}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
+        },
+      }
+    )
+      .then((res) => {
+        setData(res.data.data?.data);
+        setPaginatedInfo(res.data.data);
+      })
+      .catch((error) => console.error(error));
+  };
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    axios(API_URL + "admin/customers/list?limit=8&offset=0", {
       method: "GET",
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
       },
     })
       .then((res) => {
-        console.log(res.data);
-        setData1(res.data.data);
-        const allData = res?.data?.data;
-        console.log("RES DATA ,", res.data.data);
-        const sold = allData.filter((x) => x.is_free_coffee === "No");
-        const free = allData.filter((x) => x.is_free_coffee === "Yes");
-        // setSoldCoffee(sold.length);
-        // setFreeCoffee(free.length);
+        setData(res.data.data?.data);
+        setPaginatedInfo(res.data.data);
       })
       .catch((error) => console.error(error));
   }, []);
@@ -232,95 +216,106 @@ export default function Customers() {
                         <TableCell
                           sx={{ color: "rgb(149,158,176)", fontSize: "13px" }}
                         >
-                          Coffee Purchased
+                          Items Purchased
                         </TableCell>
                         <TableCell
                           sx={{ color: "rgb(149,158,176)", fontSize: "13px" }}
                         >
-                          Free Coffee Availed
+                          Free Items Availed
                         </TableCell>
                         <TableCell></TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {data1
-                        .slice(
-                          page * rowsPerPage,
-                          page * rowsPerPage + rowsPerPage
-                        )
-                        .map((row) => {
-                          return (
-                            <TableRow key={row.id}>
-                              <TableCell>
-                                <Box
-                                  sx={{ display: "flex", flexDirection: "row" }}
-                                >
-                                  <Avatar
-                                    sx={{ width: 35, height: 35, fontSize: 14 }}
-                                  >
-                                    {row?.initial}
-                                  </Avatar>
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      flexDirection: "column",
-                                      ml: 2,
-                                    }}
-                                  >
-                                    <Typography sx={{}}>{row?.name}</Typography>
-                                    <Typography sx={{}}>
-                                      {" "}
-                                      {row?.email}
-                                    </Typography>
-                                  </Box>
-                                </Box>
-                              </TableCell>
-                              <TableCell sx={{ fontSize: "13px" }}>
-                                {row.dateOfBirth}
-                              </TableCell>
-                              <TableCell
-                                sx={{ fontWeight: "500", fontSize: "13px" }}
+                      {data.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} sx={{ textAlign: "center" }}>
+                            No Records found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {data.map((row) => {
+                        return (
+                          <TableRow key={row.id}>
+                            <TableCell>
+                              <Box
+                                sx={{ display: "flex", flexDirection: "row" }}
                               >
-                                {row?.purhcase_coffees}
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  variant="contained"
-                                  size="small"
-                                  onClick={preventDefault}
+                                <Avatar
+                                  sx={{ width: 35, height: 35, fontSize: 14 }}
+                                >
+                                  {row?.initial}
+                                </Avatar>
+                                <Box
                                   sx={{
-                                    borderRadius: 5,
-                                    boxShadow: "none",
-                                    backgroundColor: "rgb(31,108,227)",
-                                    ":hover": {
-                                      backgroundColor: "rgb(31,108,227)",
-                                    },
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    ml: 2,
                                   }}
                                 >
-                                  {row?.free_coffees}
-                                </Button>
-                              </TableCell>
+                                  <Typography sx={{}}>{row?.name}</Typography>
+                                  <Typography sx={{}}> {row?.email}</Typography>
+                                </Box>
+                              </Box>
+                            </TableCell>
+                            <TableCell sx={{ fontSize: "13px" }}>
+                              {row.dateOfBirth}
+                            </TableCell>
+                            <TableCell
+                              sx={{ fontWeight: "500", fontSize: "13px" }}
+                            >
+                              {row?.purhcase_coffees}
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="contained"
+                                size="small"
+                                onClick={preventDefault}
+                                sx={{
+                                  borderRadius: 5,
+                                  boxShadow: "none",
+                                  backgroundColor: "rgb(31,108,227)",
+                                  ":hover": {
+                                    backgroundColor: "rgb(31,108,227)",
+                                  },
+                                }}
+                              >
+                                {row?.free_coffees}
+                              </Button>
+                            </TableCell>
 
-                              <TableCell>
-                                <MoreVertIcon color="disabled" />
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
+                            <TableCell>
+                              <MoreVertIcon color="disabled" />
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </TableContainer>
 
-                <TablePagination
-                  rowsPerPageOptions={[8, 16, 24]}
-                  component="div"
-                  count={rows.length}
-                  rowsPerPage={rowsPerPage}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                />
+                {data.length > 0 && (
+                  <TablePagination
+                    rowsPerPageOptions={[8]}
+                    component="div"
+                    count={paginatedInfo?.totalRecords}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                  />
+                )}
               </Grid>
+
+              {isOnline ? null : (
+                <Snackbar
+                  anchorOrigin={{ vertical: "top", horizontal: "center" }}
+                  open={isToastOpen}
+                  autoHideDuration={4000}
+                  onClose={() => setIsToastOpen(false)}
+                  message="No Internet Connection"
+                />
+              )}
             </Container>
           </Box>
         </Box>

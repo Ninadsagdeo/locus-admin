@@ -17,6 +17,9 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import TablePagination from "@mui/material/TablePagination";
 import TableContainer from "@mui/material/TableContainer";
 import axios from "axios";
+import { API_URL } from "../utils/api";
+import { Button, Snackbar } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 const drawerWidth = 240;
 
@@ -37,23 +40,29 @@ const Drawer = styled(MuiDrawer, {
 }));
 
 const mdTheme = createTheme();
-function createData(id, name, email, phoneno, branches) {
-  return { id, name, email, phoneno, branches };
-}
-
-const rows = [
-  createData(0, "Tim Hortins", "timhortins@gmail.com", "+010101000000", 3),
-  createData(1, "Coffee House", "timhortins@gmail.com", "+010101000000", 1),
-  createData(2, "Tim Hortins", "timhortins@gmail.com", "+010101000000", 5),
-  createData(3, "Tim Hortins", "timhortins@gmail.com", "+010101000000", 5),
-  createData(4, "Nescafe Coffee", "timhortins@gmail.com", "+010101000000", 1),
-  createData(5, "Coffee", "timhortins@gmail.com", "+010101000000", 1),
-];
 
 export default function Merchants() {
   const [page, setPage] = React.useState(0);
-  const handleChangePage = (event, newPage) => {
+  const [limit, setLimit] = useState(8);
+  const handleChangePage = async (event, newPage) => {
     setPage(newPage);
+
+    const offsetData = Number(newPage) * limit;
+    await axios(
+      API_URL +
+        `admin/sales/merchants?is_active_type=1?limit=${limit}&offset=${offsetData}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
+        },
+      }
+    )
+      .then((res) => {
+        setData(res.data.data?.data);
+        setPaginatedInfo(res.data.data);
+      })
+      .catch((error) => console.error(error));
   };
   const [rowsPerPage, setRowsPerPage] = React.useState(8);
   const handleChangeRowsPerPage = (event) => {
@@ -61,28 +70,82 @@ export default function Merchants() {
     setPage(0);
   };
 
-  const [data1, setData1] = useState([]);
-  useEffect(() => {
-    const API_URL1 = "http://13.238.161.52:4000/api/v1/admin/sales/merchants";
+  const navigate = useNavigate();
 
-    axios(API_URL1, {
+  const [data, setData] = useState([]);
+  const [paginatedInfo, setPaginatedInfo] = useState(null);
+  useEffect(() => {
+    getAllData();
+  }, []);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isToastOpen, setIsToastOpen] = useState(false);
+
+  useEffect(() => {
+    // Update network status
+    const handleStatusChange = () => {
+      setIsOnline(navigator.onLine);
+      console.log("navigator.onLine ", navigator.onLine);
+      if (navigator.onLine === false) {
+        setIsToastOpen(true);
+      } else {
+        setIsToastOpen(false);
+      }
+    };
+
+    // Listen to the online status
+    window.addEventListener("online", handleStatusChange);
+
+    // Listen to the offline status
+    window.addEventListener("offline", handleStatusChange);
+
+    // Specify how to clean up after this effect for performance improvment
+    return () => {
+      window.removeEventListener("online", handleStatusChange);
+      window.removeEventListener("offline", handleStatusChange);
+    };
+  }, [isOnline]);
+
+  const getAllData = () => {
+    axios(API_URL + "admin/sales/merchants?is_active_type=1?limit=8&offset=0", {
       method: "GET",
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
       },
     })
       .then((res) => {
-        console.log(res.data);
-        setData1(res.data.data);
-        const allData = res?.data?.data;
-        console.log("RES DATA ,", res.data.data);
-        // const sold = allData.filter((x) => x.is_free_coffee === "No");
-        // const free = allData.filter((x) => x.is_free_coffee === "Yes");
-        // setSoldCoffee(sold.length);
-        // setFreeCoffee(free.length);
+        setData(res.data.data.data);
+        setPaginatedInfo(res.data.data);
       })
       .catch((error) => console.error(error));
-  }, []);
+  };
+
+  const submitAction = async (id) => {
+    try {
+      const response = await axios.put(
+        API_URL + `users/${id}`,
+        { is_active: 0 },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
+          },
+        }
+      );
+      if (response.status === 200) {
+        getAllData();
+      }
+    } catch (err) {
+      if (!err?.response) {
+        // setErrMsg("No Server Response");
+      } else if (err.response.status == 401) {
+        localStorage.clear();
+        navigate("/");
+      } else {
+        // setErrMsg("Login Failed");
+      }
+    }
+  };
 
   return (
     <div>
@@ -167,7 +230,14 @@ export default function Merchants() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {data1.map((row) => (
+                      {data.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} sx={{ textAlign: "center" }}>
+                            No Records found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {data.map((row) => (
                         <TableRow key={row.id}>
                           <TableCell
                             sx={{ fontWeight: "500", fontSize: "13px" }}
@@ -191,27 +261,62 @@ export default function Merchants() {
                           </TableCell>
 
                           <TableCell>
-                            <MoreVertIcon color="disabled" />
+                            {/* <MoreVertIcon color="disabled" /> */}
+                            <Button
+                              variant="contained"
+                              size="small"
+                              // sx={{
+                              //   fontFamily: "sans-serif",
+                              //   fontSize: "11px",
+                              //   fontWeight: "400",
+                              // }}
+
+                              sx={{
+                                backgroundColor: "red",
+                                color: "white",
+                                fontFamily: "sans-serif",
+                                fontSize: "11px",
+                                fontWeight: "400",
+                                ":hover": {
+                                  bgcolor: "#eb4335",
+                                  color: "white",
+                                },
+                              }}
+                              onClick={() => submitAction(row?.id)}
+                              disabled={isOnline ? false : true}
+                            >
+                              Deactivate
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  {data.length > 0 && (
+                    <TablePagination
+                      rowsPerPageOptions={[8]}
+                      component="div"
+                      count={paginatedInfo?.totalRecords}
+                      rowsPerPage={rowsPerPage}
+                      page={page}
+                      onPageChange={handleChangePage}
+                      onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
+                  )}
                 </TableContainer>
-
-                <TablePagination
-                  rowsPerPageOptions={[8, 16, 24]}
-                  component="div"
-                  count={rows.length}
-                  rowsPerPage={rowsPerPage}
-                  page={page}
-                  onPageChange={handleChangePage}
-                  onRowsPerPageChange={handleChangeRowsPerPage}
-                />
               </Grid>
             </Container>
           </Box>
         </Box>
+        {isOnline ? null : (
+          <Snackbar
+            anchorOrigin={{ vertical: "top", horizontal: "center" }}
+            open={isToastOpen}
+            autoHideDuration={4000}
+            onClose={() => setIsToastOpen(false)}
+            message="No Internet Connection"
+          />
+        )}
       </ThemeProvider>
     </div>
   );

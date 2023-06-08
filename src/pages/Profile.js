@@ -20,6 +20,9 @@ import WifiCalling3OutlinedIcon from "@mui/icons-material/WifiCalling3Outlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Button from "@mui/material/Button";
 import axios from "../api/axios";
+import { API_URL } from "../utils/api";
+import { useNavigate } from "react-router-dom";
+import { Snackbar } from "@mui/material";
 
 const drawerWidth = 240;
 
@@ -48,22 +51,100 @@ export default function Profile() {
     event.preventDefault();
   };
 
-  const [data, setData] = useState();
+  const [data, setData] = useState({
+    name: "",
+    email: "",
+    phone_no: "",
+    password: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isToastOpen, setIsToastOpen] = useState(false);
 
   useEffect(() => {
-    const API_URL1 = "http://13.238.161.52:4000/api/v1/users/";
-    axios(API_URL1, {
+    // Update network status
+    const handleStatusChange = () => {
+      setIsOnline(navigator.onLine);
+      console.log("navigator.onLine ", navigator.onLine);
+      if (navigator.onLine === false) {
+        setIsToastOpen(true);
+      } else {
+        setIsToastOpen(false);
+      }
+    };
+
+    // Listen to the online status
+    window.addEventListener("online", handleStatusChange);
+
+    // Listen to the offline status
+    window.addEventListener("offline", handleStatusChange);
+
+    // Specify how to clean up after this effect for performance improvment
+    return () => {
+      window.removeEventListener("online", handleStatusChange);
+      window.removeEventListener("offline", handleStatusChange);
+    };
+  }, [isOnline]);
+
+  useEffect(() => {
+    axios(API_URL + "users/", {
       method: "GET",
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
       },
     })
       .then((res) => {
-        console.log("---> ", res.data);
         setData(res.data);
       })
       .catch((error) => console.error(error));
   }, []);
+
+  useEffect(() => {
+    const phoneNumber = localStorage.getItem("phoneNumber");
+    if (phoneNumber) {
+      setData({ ...data, phone_no: phoneNumber });
+    }
+  }, []);
+
+  const updatePhone = (e) => {
+    const numb = e.target.value;
+    if (numb.length < 11 && !isNaN(numb)) {
+      setData({ ...data, phone_no: e.target.value });
+    }
+  };
+
+  const updateData = async (id) => {
+    setIsLoading(true);
+    try {
+      const response = await axios.put(API_URL + `users/${data?.id}`, data, {
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
+        },
+      });
+      setIsLoading(false);
+      if (response.status === 200) {
+        if (response.data.phone_no) {
+          localStorage.setItem("phoneNumber", response.data.phone_no);
+        }
+
+        navigate("/dashboard");
+      }
+    } catch (err) {
+      setIsLoading(false);
+      if (!err?.response) {
+        // setErrMsg("No Server Response");
+      } else if (err.response.status == 401) {
+        localStorage.clear();
+        navigate("/");
+      } else {
+        // setErrMsg("Login Failed");
+      }
+    }
+  };
 
   return (
     <Box>
@@ -124,8 +205,11 @@ export default function Profile() {
                           <StoreOutlinedIcon sx={{ color: "#84b1f1" }} />
                         </InputAdornment>
                       }
-                      label="  Name"
+                      label="Name"
                       value={data?.name}
+                      onChange={(e) =>
+                        setData({ ...data, name: e.target.value })
+                      }
                     />
                   </FormControl>
                   <FormControl sx={{ mx: "20px", width: "45%" }}>
@@ -135,8 +219,13 @@ export default function Profile() {
                           <MailOutlineIcon sx={{ color: "#84b1f1" }} />
                         </InputAdornment>
                       }
-                      label="  Email"
+                      label="Email"
                       value={data?.email}
+                      // required={true}
+                      // inputProps={{
+                      //   maxLength: 30,
+                      //   pattern: "[A-Za-z0-9._%+-]+@[a-z0-9.-]+.[a-z]{2,}$",
+                      // }}
                     />
                   </FormControl>
                 </Box>
@@ -149,7 +238,12 @@ export default function Profile() {
                           <WifiCalling3OutlinedIcon sx={{ color: "#84b1f1" }} />
                         </InputAdornment>
                       }
-                      label="  Phone No"
+                      label="Phone No"
+                      value={data?.phone_no}
+                      inputProps={{
+                        maxLength: 10,
+                      }}
+                      onChange={(e) => updatePhone(e)}
                     />
                   </FormControl>
                   <FormControl sx={{ mx: "20px", my: "10px", width: "45%" }}>
@@ -161,6 +255,10 @@ export default function Profile() {
                       }
                       label="Password"
                       type={showPassword ? "text" : "password"}
+                      value={data?.password}
+                      onChange={(e) =>
+                        setData({ ...data, password: e.target.value })
+                      }
                       endAdornment={
                         <InputAdornment position="end">
                           <IconButton
@@ -201,6 +299,8 @@ export default function Profile() {
                         bgcolor: "rgb(31,108,227)",
                       },
                     }}
+                    onClick={updateData}
+                    disabled={isLoading}
                   >
                     Update
                   </Button>
@@ -208,6 +308,15 @@ export default function Profile() {
               </Grid>
             </Container>
           </Box>
+          {isOnline ? null : (
+            <Snackbar
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+              open={isToastOpen}
+              autoHideDuration={4000}
+              onClose={() => setIsToastOpen(false)}
+              message="No Internet Connection"
+            />
+          )}
         </Box>
       </ThemeProvider>
     </Box>

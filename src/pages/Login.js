@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 // import Button from "@mui/material/Button";
 import CssBaseline from "@mui/material/CssBaseline";
 import IconButton from "@mui/material/IconButton";
@@ -20,6 +20,7 @@ import axios from "../api/axios";
 import AuthContext from "../context/AuthProvider";
 // import { emailValidator } from "../components/regexValidator";
 import AppButton from "../components/AppButton";
+import { Snackbar } from "@mui/material";
 const API_URL = "http://13.238.161.52:4000/api/v1/users/login";
 const backgroundImage = require("./Assets/Group 48.png");
 const Image = require("./Assets/Group 47.png");
@@ -32,12 +33,14 @@ export default function Login() {
   const [errMsg, setErrMsg] = useState("");
   const [successMessage, setsuccessMessage] = useState("");
   const { setAuth } = useContext(AuthContext);
+  const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     try {
+      setIsLoading(true);
       const response = await axios.post(
         API_URL,
         JSON.stringify({ email, password }),
@@ -48,20 +51,25 @@ export default function Login() {
           },
         }
       );
-      console.log("===> access ", response.data?.data);
+
       const userData = response?.data?.data;
       if (userData.user_type === "admin") {
         const token = response?.data?.data?.token;
-        await localStorage.setItem("token", response?.data?.data?.token);
+        const phoneNumber = response?.data?.data?.other_details?.phone_no;
+        await localStorage.setItem("phoneNumber", phoneNumber);
+        await localStorage.setItem("tokenAdmin", response?.data?.data?.token);
         setAuth(email, password, token);
         setEmail("");
         setPassword("");
         setsuccessMessage("");
+        setIsLoading(false);
         navigate("/dashboard");
       } else {
+        setIsLoading(false);
         setErrMsg("Email or Password is Incorrect");
       }
     } catch (err) {
+      setIsLoading(false);
       if (!err?.response) {
         setErrMsg("No Server Response");
       } else if (err.response?.status === 400) {
@@ -75,6 +83,34 @@ export default function Login() {
   };
 
   const [showPassword, setShowPassword] = React.useState(false);
+
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isToastOpen, setIsToastOpen] = useState(false);
+
+  useEffect(() => {
+    // Update network status
+    const handleStatusChange = () => {
+      setIsOnline(navigator.onLine);
+      console.log("navigator.onLine ", navigator.onLine);
+      if (navigator.onLine === false) {
+        setIsToastOpen(true);
+      } else {
+        setIsToastOpen(false);
+      }
+    };
+
+    // Listen to the online status
+    window.addEventListener("online", handleStatusChange);
+
+    // Listen to the offline status
+    window.addEventListener("offline", handleStatusChange);
+
+    // Specify how to clean up after this effect for performance improvment
+    return () => {
+      window.removeEventListener("online", handleStatusChange);
+      window.removeEventListener("offline", handleStatusChange);
+    };
+  }, [isOnline]);
 
   // const gotoVerificationPage = () => navigate("/forgetPassword");
   // const gotoSignupPage = () => navigate("/register");
@@ -98,36 +134,16 @@ export default function Login() {
               display: { xs: "none", sm: "block", md: "block", lg: "block" },
             }}
           >
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
+            <img
+              style={{
+                height: "200px",
+                position: "absolute",
+                top: "35%",
+                left: "20%",
               }}
-            >
-              <Box sx={{ mt: 3 }}>
-                <img style={{ width: "220px" }} src={backgroundImage} alt="" />
-              </Box>
-              <Box>
-                <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
-                  <img style={{ height: "300px" }} src={logo} alt="" />
-                </Box>
-                {/* <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
-                  <img style={{ width: "200px" }} src={text} alt="" />
-                </Box> */}
-              </Box>
-
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  mt: 3,
-                  marginRight: "20px",
-                }}
-              >
-                <img style={{ width: "220px" }} src={Image} alt="" />
-              </Box>
-            </Box>
+              src={logo}
+              alt=""
+            />
           </Grid>
 
           <Grid
@@ -176,6 +192,10 @@ export default function Login() {
                       label="Email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      inputProps={{
+                        maxLength: 30,
+                        pattern: "[A-Za-z0-9._%+-]+@[a-z0-9.-]+.[a-z]{2,}$",
+                      }}
                     />
                   </FormControl>
 
@@ -191,6 +211,9 @@ export default function Login() {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      inputProps={{
+                        maxLength: 30,
+                      }}
                       endAdornment={
                         <InputAdornment position="end">
                           <IconButton
@@ -198,7 +221,7 @@ export default function Login() {
                             onClick={() => setShowPassword(!showPassword)}
                             edge="end"
                           >
-                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                            {!showPassword ? <VisibilityOff /> : <Visibility />}
                           </IconButton>
                         </InputAdornment>
                       }
@@ -240,20 +263,17 @@ export default function Login() {
                       style={{ mt: 3, mb: 2, px: 2 }}
                       type="submit"
                       title="Login"
+                      disabled={isLoading || !isOnline ? true : false}
                     />
 
-                    <Link
-                      href="#"
-                      variant="body2"
-                      // onClick={gotoVerificationPage}
-                      sx={{
-                        color: "rgb(31,108,227)",
-                        fontWeight: "700",
-                        textDecoration: "none",
-                      }}
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight="bold"
+                      sx={{ color: "rgb(31,108,227)", cursor: "pointer" }}
+                      onClick={() => navigate("/forgetPassword")}
                     >
                       Forgot password?
-                    </Link>
+                    </Typography>
 
                     {/* <Link
                       href="#"
@@ -280,6 +300,15 @@ export default function Login() {
                     </Link> */}
                   </Box>
                 </Box>
+                {isOnline ? null : (
+                  <Snackbar
+                    anchorOrigin={{ vertical: "top", horizontal: "center" }}
+                    open={isToastOpen}
+                    autoHideDuration={4000}
+                    onClose={() => setIsToastOpen(false)}
+                    message="No Internet Connection"
+                  />
+                )}
               </form>
             </Box>
           </Grid>

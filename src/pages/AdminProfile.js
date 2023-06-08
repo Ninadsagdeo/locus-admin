@@ -23,6 +23,7 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import Button from "@mui/material/Button";
 import { useNavigate } from "react-router-dom";
 import axios from "../api/axios";
+import { Snackbar } from "@mui/material";
 
 const drawerWidth = 240;
 
@@ -60,12 +61,42 @@ export default function AdminProfile() {
     // is_barista:"",
   });
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const [errMsg, setErrMsg] = useState("");
+
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isToastOpen, setIsToastOpen] = useState(false);
+
+  useEffect(() => {
+    // Update network status
+    const handleStatusChange = () => {
+      setIsOnline(navigator.onLine);
+      console.log("navigator.onLine ", navigator.onLine);
+      if (navigator.onLine === false) {
+        setIsToastOpen(true);
+      } else {
+        setIsToastOpen(false);
+      }
+    };
+
+    // Listen to the online status
+    window.addEventListener("online", handleStatusChange);
+
+    // Listen to the offline status
+    window.addEventListener("offline", handleStatusChange);
+
+    // Specify how to clean up after this effect for performance improvment
+    return () => {
+      window.removeEventListener("online", handleStatusChange);
+      window.removeEventListener("offline", handleStatusChange);
+    };
+  }, [isOnline]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.password === confirmPassword) {
+      setIsLoading(true);
       const formData = {
         ...form,
         is_merchant: "No",
@@ -86,11 +117,12 @@ export default function AdminProfile() {
         // console.log("===> access ", response.data?.data);
 
         //
-
+        setIsLoading(false);
         if (response.data.status_code === 1000 && response.data.status) {
           navigate(-1);
         }
       } catch (err) {
+        setIsLoading(false);
         if (!err?.response) {
           setErrMsg("No Server Response");
         } else if (err.response?.status === 400) {
@@ -200,6 +232,9 @@ export default function AdminProfile() {
                         onChange={(e) =>
                           setForm({ ...form, name: e.target.value })
                         }
+                        inputProps={{
+                          maxLength: 30,
+                        }}
                       />
                     </FormControl>
                     <FormControl sx={{ mx: "20px", width: "45%" }}>
@@ -215,6 +250,10 @@ export default function AdminProfile() {
                         onChange={(e) =>
                           setForm({ ...form, email: e.target.value })
                         }
+                        inputProps={{
+                          maxLength: 30,
+                          pattern: "[A-Za-z0-9._%+-]+@[a-z0-9.-]+.[a-z]{2,}$",
+                        }}
                       />
                     </FormControl>
                   </Box>
@@ -231,6 +270,9 @@ export default function AdminProfile() {
                         }
                         label="Phone No"
                         value={form.phone_no}
+                        inputProps={{
+                          maxLength: 10,
+                        }}
                         onChange={(e) => onPhoneNumberChange(e)}
                       />
                     </FormControl>
@@ -264,6 +306,10 @@ export default function AdminProfile() {
                           </InputAdornment>
                         }
                         value={form.password}
+                        required
+                        inputProps={{
+                          maxLength: 30,
+                        }}
                         onChange={(e) =>
                           setForm({ ...form, password: e.target.value })
                         }
@@ -297,10 +343,16 @@ export default function AdminProfile() {
                           </InputAdornment>
                         }
                         value={confirmPassword}
+                        required
+                        inputProps={{
+                          maxLength: 30,
+                        }}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                       />
                     </FormControl>
                   </Box>
+
+                  <Typography color={"red"}>{errMsg}</Typography>
 
                   <Box
                     sx={{
@@ -354,6 +406,15 @@ export default function AdminProfile() {
                 </Grid>
               </form>
             </Container>
+            {isOnline ? null : (
+              <Snackbar
+                anchorOrigin={{ vertical: "top", horizontal: "center" }}
+                open={isToastOpen}
+                autoHideDuration={4000}
+                onClose={() => setIsToastOpen(false)}
+                message="No Internet Connection"
+              />
+            )}
           </Box>
         </Box>
       </ThemeProvider>

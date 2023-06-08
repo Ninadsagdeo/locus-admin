@@ -17,6 +17,7 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import axios from "axios";
 import merchantIcon from "./Assets/merchant.svg";
 import coffeeIcon from "./Assets/coffee.svg";
+import { API_URL } from "../utils/api";
 
 const drawerWidth = 240;
 // const merchantIcon = require("./Assets/merchant.svg");
@@ -42,12 +43,10 @@ const mdTheme = createTheme();
 export default function Dashboard() {
   const [data, setData] = useState([]);
   useEffect(() => {
-    const API_URL = "http://13.238.161.52:4000/api/v1/admin/dashboard/stats";
-
-    axios(API_URL, {
+    axios(API_URL + "admin/dashboard/stats", {
       method: "GET",
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("token"),
+        Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
       },
     })
       .then((res) => {
@@ -123,7 +122,7 @@ export default function Dashboard() {
                       },
                     }}
                   >
-                    <Title>Total Merchants</Title>
+                    <Title sx={{ textAlign: "center" }}>Total Merchants</Title>
 
                     <Typography
                       component="p"
@@ -167,7 +166,7 @@ export default function Dashboard() {
                       },
                     }}
                   >
-                    <Title>Total Customers</Title>
+                    <Title sx={{ textAlign: "center" }}>Total Customers</Title>
                     <Typography
                       component="p"
                       variant="h4"
@@ -203,7 +202,7 @@ export default function Dashboard() {
                       },
                     }}
                   >
-                    <Title>Coffee Sold</Title>
+                    <Title sx={{ textAlign: "center" }}>Items Sold</Title>
                     <Typography
                       component="p"
                       variant="h4"
@@ -214,13 +213,6 @@ export default function Dashboard() {
                       }}
                     >
                       {data?.total_purchase_coffee || 0}
-                      <ListItemIcon sx={{ px: "4px" }}>
-                        <img
-                          src={coffeeIcon}
-                          style={{ height: 20, width: 20 }}
-                          alt=""
-                        />
-                      </ListItemIcon>
                     </Typography>
                   </Paper>
                 </Grid>
@@ -243,7 +235,7 @@ export default function Dashboard() {
                       },
                     }}
                   >
-                    <Title>Free Coffee</Title>
+                    <Title sx={{ textAlign: "center" }}>Free Items</Title>
                     <Typography
                       component="p"
                       variant="h4"
@@ -254,13 +246,6 @@ export default function Dashboard() {
                       }}
                     >
                       {data?.total_free_coffee || 0}
-                      <ListItemIcon sx={{ px: "4px" }}>
-                        <img
-                          src={coffeeIcon}
-                          style={{ height: 20, width: 20 }}
-                          alt=""
-                        />
-                      </ListItemIcon>
                     </Typography>
                   </Paper>
                 </Grid>

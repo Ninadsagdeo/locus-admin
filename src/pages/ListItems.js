@@ -10,6 +10,8 @@ import ShoppingCartIcon from "@mui/icons-material/ShoppingCart";
 import PeopleIcon from "@mui/icons-material/People";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import LayersIcon from "@mui/icons-material/Layers";
+
+import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import "../style.css";
 
 import { useLocation, useNavigate } from "react-router-dom";
@@ -41,6 +43,10 @@ export default function ListItems() {
 
   const gotoAdminPage = () => {
     navigate("/adminUsers");
+  };
+
+  const gotoIssueList = () => {
+    navigate("/issueList");
   };
 
   //   useEffect(() => {
@@ -125,6 +131,25 @@ export default function ListItems() {
               />
             </ListItemIcon>
             <ListItemText primary="Customers" sx={{ color: "#d1dbed" }} />
+          </ListItemButton>
+
+          <ListItemButton
+            onClick={gotoIssueList}
+            sx={
+              location.pathname.includes("issueList")
+                ? { backgroundColor: "rgb(31,108,227)" }
+                : {}
+            }
+          >
+            <ListItemIcon sx={{ color: "#d1dbed" }}>
+              {/* <img
+                src={profileIcon}
+                style={{ height: 20, width: 20, color: "#d1dbed" }}
+                alt=""
+              /> */}
+              <SupportAgentIcon />
+            </ListItemIcon>
+            <ListItemText primary="Issue List" sx={{ color: "#d1dbed" }} />
           </ListItemButton>
 
           <ListItemButton

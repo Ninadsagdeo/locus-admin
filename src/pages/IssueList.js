@@ -7,20 +7,20 @@ import List from "@mui/material/List";
 import Typography from "@mui/material/Typography";
 import Container from "@mui/material/Container";
 import Grid from "@mui/material/Grid";
-import Paper from "@mui/material/Paper";
 import ListItems from "./ListItems";
+import Avatar from "@mui/material/Avatar";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import TablePagination from "@mui/material/TablePagination";
 import TableContainer from "@mui/material/TableContainer";
 import Button from "@mui/material/Button";
-import { useNavigate } from "react-router-dom";
-import axios from "../api/axios";
+import axios from "axios";
 import { API_URL } from "../utils/api";
-import { Snackbar, TablePagination } from "@mui/material";
+import { Snackbar } from "@mui/material";
 
 const drawerWidth = 240;
 
@@ -42,15 +42,20 @@ const Drawer = styled(MuiDrawer, {
 
 const mdTheme = createTheme();
 
-export default function Admin() {
-  const navigate = useNavigate();
-  const gotoAdminpage = () => navigate("/adminProfile");
-  const [paginatedInfo, setPaginatedInfo] = useState(null);
+function preventDefault(event) {
+  event.preventDefault();
+}
+
+export default function IssueList() {
   const [page, setPage] = React.useState(0);
+
+  const [rowsPerPage, setRowsPerPage] = React.useState(8);
+
+  const [paginatedInfo, setPaginatedInfo] = useState(null);
+
+  const [offset, setOffset] = useState(1);
   const [limit, setLimit] = useState(8);
 
-  const [data, setData] = useState([]);
-  const [rowsPerPage, setRowsPerPage] = React.useState(8);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isToastOpen, setIsToastOpen] = useState(false);
 
@@ -79,11 +84,17 @@ export default function Admin() {
     };
   }, [isOnline]);
 
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 16));
+    setPage(0);
+  };
   const handleChangePage = async (event, newPage) => {
+    console.log("NEW PAGE ", newPage);
     setPage(newPage);
 
     const offsetData = Number(newPage) * limit;
-    await axios(API_URL + `admin/list?limit=${limit}&offset=${offsetData}`, {
+
+    await axios(API_URL + `user_support?limit=${limit}&offset=${offsetData}`, {
       method: "GET",
       headers: {
         Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
@@ -95,26 +106,22 @@ export default function Admin() {
       })
       .catch((error) => console.error(error));
   };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 16));
-    setPage(0);
-  };
+  const [data, setData] = useState([]);
   useEffect(() => {
-    axios(API_URL + "admin/list?limit=8&offset=0", {
+    axios(API_URL + "user_support?limit=0&offset=0", {
       method: "GET",
       headers: {
         Authorization: "Bearer " + localStorage.getItem("tokenAdmin"),
       },
     })
       .then((res) => {
-        if (res.data?.status_code === 1000 && res.data?.status) {
-          setData(res.data.data?.data);
-          setPaginatedInfo(res.data.data);
-        }
+        console.log("RES ", res.data?.data);
+        setData(res.data.data);
+        setPaginatedInfo(res.data.data);
       })
       .catch((error) => console.error(error));
   }, []);
+
   return (
     <div>
       <ThemeProvider theme={mdTheme}>
@@ -136,52 +143,22 @@ export default function Admin() {
               overflow: "auto",
             }}
           >
-            <Box
-              mx={3}
-              my={4}
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-              }}
-            >
-              <Box>
-                <Typography
-                  variant="h5"
-                  fontSize="xl2"
-                  fontWeight="500"
-                  gutterBottom
-                >
-                  Admins
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{ fontSize: "15px", color: "rgb(149,158,176)" }}
-                >
-                  You can view and add Admins here
-                </Typography>
-              </Box>
-              <Box>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  onClick={gotoAdminpage}
-                  sx={{
-                    mt: "20px",
-                    px: 5,
-                    boxShadow: "none",
-                    textTransform: "none",
-                    borderRadius: 2,
-                    backgroundColor: "rgb(31,108,227)",
-                    height: 40,
-                    ":hover": {
-                      backgroundColor: "rgb(31,108,227)",
-                    },
-                  }}
-                  disabled={isOnline ? false : true}
-                >
-                  + Add Admin
-                </Button>
-              </Box>
+            <Box mx={3} my={4}>
+              <Typography
+                variant="h5"
+                fontSize="xl2"
+                fontWeight="500"
+                display="block"
+                gutterBottom
+              >
+                Logged Issues
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ fontSize: "15px", color: "rgb(149,158,176)" }}
+              >
+                You can view the Logged issue in Locus App here
+              </Typography>
             </Box>
             <Container maxWidth="lg" sx={{ mt: 2, mb: 2 }}>
               <Grid
@@ -197,85 +174,73 @@ export default function Admin() {
                   borderRadius: "5px",
                 }}
               >
-                <TableContainer component={Paper}>
+                <TableContainer>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
                         <TableCell
                           sx={{ color: "rgb(149,158,176)", fontSize: "13px" }}
                         >
-                          Admin Name
+                          User Name
                         </TableCell>
                         <TableCell
                           sx={{ color: "rgb(149,158,176)", fontSize: "13px" }}
                         >
-                          Admin Email
+                          Description
                         </TableCell>
-                        <TableCell
-                          sx={{ color: "rgb(149,158,176)", fontSize: "13px" }}
-                        >
-                          Admin Phone No
-                        </TableCell>
-                        <TableCell> </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {data.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={3} sx={{ textAlign: "center" }}>
+                          <TableCell colSpan={5} sx={{ textAlign: "center" }}>
                             No Records found
                           </TableCell>
                         </TableRow>
                       )}
-                      {data.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell
-                            sx={{ fontWeight: "500", fontSize: "13px" }}
-                          >
-                            {row?.name}
-                          </TableCell>
-                          <TableCell
-                            sx={{ fontWeight: "500", fontSize: "13px" }}
-                          >
-                            {row?.email}
-                          </TableCell>
-                          <TableCell
-                            sx={{ fontWeight: "500", fontSize: "13px" }}
-                          >
-                            {row?.user_other_details[0]?.phone_no}
-                          </TableCell>
-                          {console.log("--> ", row)}
+                      {data.map((row) => {
+                        return (
+                          <TableRow key={row.id}>
+                            <TableCell sx={{ fontSize: "13px" }}>
+                              {row?.User?.name}
+                            </TableCell>
+                            <TableCell sx={{ fontSize: "13px" }}>
+                              {row?.description}
+                            </TableCell>
+                            {/* ?limit=8&offset=0 */}
 
-                          <TableCell>
-                            <MoreVertIcon color="disabled" />
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            {/* <TableCell>
+                              <MoreVertIcon color="disabled" />
+                            </TableCell> */}
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
-                  {data.length > 0 && (
-                    <TablePagination
-                      rowsPerPageOptions={[8]}
-                      component="div"
-                      count={paginatedInfo?.totalRecords}
-                      rowsPerPage={rowsPerPage}
-                      page={page}
-                      onPageChange={handleChangePage}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
-                    />
-                  )}
                 </TableContainer>
 
-                {isOnline ? null : (
-                  <Snackbar
-                    anchorOrigin={{ vertical: "top", horizontal: "center" }}
-                    open={isToastOpen}
-                    autoHideDuration={4000}
-                    onClose={() => setIsToastOpen(false)}
-                    message="No Internet Connection"
+                {/* {data.length > 0 && (
+                  <TablePagination
+                    rowsPerPageOptions={[8]}
+                    component="div"
+                    count={paginatedInfo?.totalRecords}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
                   />
-                )}
+                )} */}
               </Grid>
+
+              {isOnline ? null : (
+                <Snackbar
+                  anchorOrigin={{ vertical: "top", horizontal: "center" }}
+                  open={isToastOpen}
+                  autoHideDuration={4000}
+                  onClose={() => setIsToastOpen(false)}
+                  message="No Internet Connection"
+                />
+              )}
             </Container>
           </Box>
         </Box>
